@@ -47,6 +47,7 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
+import numpy as np
 
 #yolov5
 from yolov5.utils.datasets import LoadImages, LoadStreams
@@ -60,7 +61,6 @@ from sort import *
 torch.set_printoptions(precision=3)
 
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
-
 
 def bbox_rel(*xyxy):
     """" Calculates the relative bounding box from absolute pixel values. """
@@ -96,7 +96,7 @@ def draw_boxes(img, bbox, identities=None, categories=None, names=None, offset=(
         id = int(identities[i]) if identities is not None else 0
         
         color = compute_color_for_labels(id)
-        
+
         label = f'{names[cat]} | {id}'
         t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 2, 2)[0]
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
