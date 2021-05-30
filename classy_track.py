@@ -58,6 +58,9 @@ from yolov5.utils.torch_utils import select_device, time_synchronized
 import skimage
 from sort import *
 
+#predict object's move
+import predict
+
 torch.set_printoptions(precision=3)
 
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
@@ -92,7 +95,6 @@ def draw_boxes(img, bbox, identities=None, categories=None, names=None, offset=(
         y2 += offset[1]
         # box text and bar
         cat = int(categories[i]) if categories is not None else 0
-        
         id = int(identities[i]) if identities is not None else 0
         
         color = compute_color_for_labels(id)
@@ -116,7 +118,9 @@ def detect(opt, *args):
     sort_tracker = Sort(max_age=sort_max_age,
                        min_hits=sort_min_hits,
                        iou_threshold=sort_iou_thresh) # {plug into parser}
-    
+    predict_tracker = predict.Sort(max_age=sort_max_age,
+                       min_hits=sort_min_hits,
+                       iou_threshold=sort_iou_thresh) # {plug into parser}
     
     # Directory and CUDA settings for yolov5
     device = select_device(opt.device)
@@ -199,17 +203,27 @@ def detect(opt, *args):
 
             # Run SORT
             tracked_dets = sort_tracker.update(dets_to_sort)
-
             print('Output from SORT:\n',tracked_dets,'\n')
 
-            
+
+            dets_to_predict = tracked_dets
+            predicted_dets = predict_tracker.update(dets_to_predict)
+            print('Output from PREDICT:\n',predicted_dets,'\n')
+
+            '''
+            if len(predicted_dets)>0:
+                bbox_xyxy = predicted_dets[:,:4]
+                identities = predicted_dets[:, 8]
+                categories = predicted_dets[:, 4]
+                draw_boxes(im0, bbox_xyxy, identities, categories, names)
+            '''
             # draw boxes for visualization
             if len(tracked_dets)>0:
                 bbox_xyxy = tracked_dets[:,:4]
                 identities = tracked_dets[:, 8]
                 categories = tracked_dets[:, 4]
                 draw_boxes(im0, bbox_xyxy, identities, categories, names)
-                
+
             # Write detections to file. NOTE: Not MOT-compliant format.
             if save_txt and len(tracked_dets) != 0:
                 for j, tracked_dets in enumerate(tracked_dets):
@@ -284,7 +298,7 @@ if __name__ == '__main__':
     parser.add_argument('--save-txt', action='store_true',
                         help='save results to *.txt')
     parser.add_argument('--classes', nargs='+', type=int,
-                        default=[i for i in range(80)], help='filter by class') #80 classes in COCO dataset
+                        default=[0, 2], help='filter by class') #80 classes in COCO dataset
     parser.add_argument('--agnostic-nms', action='store_true',
                         help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true',
